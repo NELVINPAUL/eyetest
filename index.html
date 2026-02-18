@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title></title>
+</head>
+<body>
+
+    <div class="top-bar">
+        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="overlay" id="start-screen">
+        <h1>EYE<br>TEST</h1>
+        <p>• Spot the different color.<br>Be fast!</p> 
+        <button class="btn-main" onclick="startGame()">Play</button>
+    </div>
+
+    <div class="overlay hidden" id="game-over-screen">
+        <h1>GAME OVER</h1>
+        <p>
+            Score: <span id="final-score">0</span><br>
+            <span style="font-size: 0.8em">(Best: <span id="final-hs">0</span>)</span>
+        </p>
+        <button class="btn-main" onclick="startGame()">Try Again</button>
+    </div>
+
+    <div class="game-container">
+        <div class="header">
+            <div class="stat-box"><h2>Score</h2><span id="score">0</span></div>
+            <div class="stat-box"><h2>Best</h2><span id="hs">0</span></div>
+            <div class="stat-box"><h2>Time</h2><span id="time">10</span></div>
+        </div>
+        <div id="grid-container"></div>
+    </div>
+
+    <div class="footer">@Nelvin Paul</div>
+
+    <script>
+        const SafeStorage = {
+            get: function(key) {
+                try { return localStorage.getItem(key) || 0; } 
+                catch (e) { console.warn("Storage disabled"); return 0; }
+            },
+            set: function(key, value) {
+                try { localStorage.setItem(key, value); } 
+                catch (e) { console.warn("Storage disabled"); }
+            }
+        };
+        const gridContainer = document.getElementById('grid-container');
+        const scoreEl = document.getElementById('score');
+        const hsEl = document.getElementById('hs');
+        const finalHsEl = document.getElementById('final-hs');
+        const timeEl = document.getElementById('time');
+        const finalScoreEl = document.getElementById('final-score');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const body = document.body;
+        const themeBtn = document.querySelector('.theme-toggle');
+        let score = 0;
+        let timeLeft = 10;
+        let timerId = null;
+        let highScore = SafeStorage.get('oddOneOutHS');
+        hsEl.innerText = highScore;
+        function toggleTheme() {
+            body.classList.toggle('dark-mode');
+            themeBtn.innerText = body.classList.contains('dark-mode') ? "☀️" : "🌙";
+        }
+        function startGame() {
+            score = 0;
+            timeLeft = 10;
+            scoreEl.innerText = score;
+            timeEl.innerText = timeLeft;
+            timeEl.style.color = "inherit";
+            
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            if (timerId) clearInterval(timerId);
+            timerId = setInterval(updateTimer, 1000);
+            
+            generateLevel();
+        }
+        function updateTimer() {
+            timeLeft--;
+            timeEl.innerText = timeLeft;
+            if(timeLeft <= 3) timeEl.style.color = "#ff4444";
+            if (timeLeft <= 0) endGame();
+        }
+        function endGame() {
+            clearInterval(timerId);
+            
+            // high
+            if(score > highScore) {
+                highScore = score;
+                SafeStorage.set('oddOneOutHS', highScore);
+            }
+            finalScoreEl.innerText = score;
+            finalHsEl.innerText = highScore;
+            hsEl.innerText = highScore;
+            gameOverScreen.classList.remove('hidden');
+            // shake effect
+            const container = document.querySelector('.game-container');
+            container.classList.remove('shake'); // reset
+            void container.offsetWidth; // force reflow
+            container.classList.add('shake');
+        }
+        function generateLevel() {
+            gridContainer.innerHTML = '';
+            let gridSize = 2;
+            if (score >= 3) gridSize = 3;
+            if (score >= 6) gridSize = 4;
+            if (score >= 12) gridSize = 5;
+            if (score >= 20) gridSize = 6;
+
+            gridContainer.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            gridContainer.style.gap = gridSize >= 5 ? '6px' : '10px';
+            const baseHue = Math.floor(Math.random() * 360);
+            const baseSat = 70; 
+            const baseLight = 50; 
+            let diff = Math.max(5, 30 - Math.floor(score * 1.5));
+
+            const isLighter = Math.random() > 0.5;
+            let targetLight = isLighter ? baseLight + diff : baseLight - diff;
+            // HSL 
+            const baseColor = `hsl(${baseHue}, ${baseSat}%, ${baseLight}%)`;
+            const targetColor = `hsl(${baseHue}, ${baseSat}%, ${targetLight}%)`;
+
+            const totalTiles = gridSize * gridSize;
+            const targetIndex = Math.floor(Math.random() * totalTiles);
+            for (let i = 0; i < totalTiles; i++) {
+                const tile = document.createElement('div');
+                tile.classList.add('tile');
+                tile.style.backgroundColor = (i === targetIndex) ? targetColor : baseColor;
+                // click handler
+                tile.onclick = (i === targetIndex) ? handleCorrectClick : handleWrongClick;
+                
+                gridContainer.appendChild(tile);
+            }
+        }
+        function handleCorrectClick() {
+            score++;
+            scoreEl.innerText = score;
+            timeLeft = 10; // reset
+            timeEl.innerText = timeLeft;
+            timeEl.style.color = "inherit";
+            generateLevel();
+        }
+        function handleWrongClick() {
+        if(score<=10){
+            alert("You are colorblind!")
+        }
+            endGame();
+        }
+    </script>
+</body>
+</html>
+
+
